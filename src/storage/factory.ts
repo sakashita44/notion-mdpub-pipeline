@@ -11,7 +11,7 @@ import { GDriveAdapter } from './gdrive.js';
  * @throws バックエンドが未指定または不正な場合
  */
 export function createStorageAdapter(backend?: StorageBackend): StorageAdapter {
-    const resolved = backend ?? (process.env.STORAGE_BACKEND as StorageBackend);
+    const resolved: string | undefined = backend ?? process.env.STORAGE_BACKEND;
 
     switch (resolved) {
         case 'dropbox':
