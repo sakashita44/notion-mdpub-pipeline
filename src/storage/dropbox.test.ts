@@ -86,12 +86,25 @@ describe('DropboxAdapter', () => {
         it('API がエラーを返した場合はエラーをスローする', async () => {
             vi.stubGlobal(
                 'fetch',
+                vi.fn().mockResolvedValue(mockResponse(500, 'Server Error')),
+            );
+            const adapter = new DropboxAdapter();
+            await expect(
+                adapter.uploadFile('blog/index.md', Buffer.from('content')),
+            ).rejects.toThrowError('Dropbox upload 失敗 (500): Server Error');
+        });
+
+        it('401 の場合はトークン期限切れの可能性を示すメッセージを含む', async () => {
+            vi.stubGlobal(
+                'fetch',
                 vi.fn().mockResolvedValue(mockResponse(401, 'Unauthorized')),
             );
             const adapter = new DropboxAdapter();
             await expect(
                 adapter.uploadFile('blog/index.md', Buffer.from('content')),
-            ).rejects.toThrowError('Dropbox upload 失敗 (401): Unauthorized');
+            ).rejects.toThrowError(
+                'Dropbox upload 失敗 (401): 認証エラー（トークンが無効または期限切れの可能性があります）: Unauthorized',
+            );
         });
     });
 
@@ -137,7 +150,7 @@ describe('DropboxAdapter', () => {
             ).rejects.toThrowError('Dropbox delete 失敗 (409)');
         });
 
-        it('認証エラーの場合はエラーをスローする', async () => {
+        it('401 の場合はトークン期限切れの可能性を示すメッセージを含む', async () => {
             vi.stubGlobal(
                 'fetch',
                 vi.fn().mockResolvedValue(mockResponse(401, 'Unauthorized')),
@@ -145,7 +158,9 @@ describe('DropboxAdapter', () => {
             const adapter = new DropboxAdapter();
             await expect(
                 adapter.deleteFile('blog/index.md'),
-            ).rejects.toThrowError('Dropbox delete 失敗 (401): Unauthorized');
+            ).rejects.toThrowError(
+                'Dropbox delete 失敗 (401): 認証エラー（トークンが無効または期限切れの可能性があります）: Unauthorized',
+            );
         });
     });
 });

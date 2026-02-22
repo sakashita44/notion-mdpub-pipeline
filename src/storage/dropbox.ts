@@ -1,13 +1,23 @@
 import type { StorageAdapter } from './adapter.js';
 
-const UPLOAD_URL = 'https://content.dropboxapi.com/2/files/upload';
-const DELETE_URL = 'https://api.dropboxapi.com/2/files/delete_v2';
+const DEFAULT_UPLOAD_URL = 'https://content.dropboxapi.com/2/files/upload';
+const DEFAULT_DELETE_URL = 'https://api.dropboxapi.com/2/files/delete_v2';
+
+/** DropboxAdapter のコンストラクタオプション */
+export interface DropboxAdapterOptions {
+    /** アップロード API の URL（テスト用オーバーライド） */
+    uploadUrl?: string;
+    /** 削除 API の URL（テスト用オーバーライド） */
+    deleteUrl?: string;
+}
 
 /** Dropbox バックエンドの StorageAdapter 実装 */
 export class DropboxAdapter implements StorageAdapter {
     private readonly token: string;
+    private readonly uploadUrl: string;
+    private readonly deleteUrl: string;
 
-    constructor() {
+    constructor(options?: DropboxAdapterOptions) {
         const token = process.env.DROPBOX_ACCESS_TOKEN;
         if (!token) {
             throw new Error(
@@ -15,6 +25,8 @@ export class DropboxAdapter implements StorageAdapter {
             );
         }
         this.token = token;
+        this.uploadUrl = options?.uploadUrl ?? DEFAULT_UPLOAD_URL;
+        this.deleteUrl = options?.deleteUrl ?? DEFAULT_DELETE_URL;
     }
 
     /**
@@ -25,7 +37,7 @@ export class DropboxAdapter implements StorageAdapter {
     async uploadFile(path: string, content: Buffer): Promise<void> {
         const dropboxPath = path.startsWith('/') ? path : `/${path}`;
 
-        const response = await fetch(UPLOAD_URL, {
+        const response = await fetch(this.uploadUrl, {
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${this.token}`,
@@ -43,9 +55,11 @@ export class DropboxAdapter implements StorageAdapter {
         if (!response.ok) {
             const error = await response.text();
             throw new Error(
-                `Dropbox upload 失敗 (${response.status}): ${error}`,
+                this.formatErrorMessage('upload', response.status, error),
             );
         }
+        // 成功時もレスポンスボディを消費してリソースリークを防止
+        await response.text();
     }
 
     /**
@@ -56,7 +70,7 @@ export class DropboxAdapter implements StorageAdapter {
     async deleteFile(path: string): Promise<void> {
         const dropboxPath = path.startsWith('/') ? path : `/${path}`;
 
-        const response = await fetch(DELETE_URL, {
+        const response = await fetch(this.deleteUrl, {
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${this.token}`,
@@ -65,8 +79,9 @@ export class DropboxAdapter implements StorageAdapter {
             body: JSON.stringify({ path: dropboxPath }),
         });
 
+        const bodyText = await response.text();
+
         if (!response.ok) {
-            const bodyText = await response.text();
             // ファイルが存在しない場合は正常終了
             if (response.status === 409) {
                 try {
@@ -83,8 +98,21 @@ export class DropboxAdapter implements StorageAdapter {
                 }
             }
             throw new Error(
-                `Dropbox delete 失敗 (${response.status}): ${bodyText}`,
+                this.formatErrorMessage('delete', response.status, bodyText),
             );
         }
+    }
+
+    /** ステータスコードに応じたエラーメッセージを生成する */
+    private formatErrorMessage(
+        operation: string,
+        status: number,
+        body: string,
+    ): string {
+        const base = `Dropbox ${operation} 失敗 (${status})`;
+        if (status === 401) {
+            return `${base}: 認証エラー（トークンが無効または期限切れの可能性があります）: ${body}`;
+        }
+        return `${base}: ${body}`;
     }
 }
