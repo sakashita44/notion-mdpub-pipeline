@@ -6,8 +6,8 @@
 Notion (執筆環境)
   ↓ Custom Agent（mdpub 形式 MD に変換）
 GitHub (テキスト中継点・private リポジトリ)
-  ↓ GitHub Actions → クラウドストレージ API
-ローカル記事ディレクトリ（Dropbox / Google Drive 同期）
+  ↓ GitHub Actions → StorageAdapter
+ローカル記事ディレクトリ
   ├── index.md    ← 自動配送
   └── images/     ← 手動配置 or 自動配送
   ↓ mdpub publish（PC 上で実行）
@@ -30,13 +30,9 @@ Notion ページを読み取り、mdpub 互換の Markdown（frontmatter + 本�
 
 ### GitHub Actions（配送レイヤー）
 
-`posts/` 配下への push をトリガーに、クラウドストレージ API（Dropbox / Google Drive）で該当記事ディレクトリへファイルを配送する。
+`posts/` 配下への push をトリガーに、StorageAdapter 経由で該当記事ディレクトリへファイルを配送する。初期対応は Dropbox / Google Drive。
 
-ローカル側に `.git/` を持たせない設計のため、クラウドストレージ同期との相性問題を回避できる。
-
-### クラウドストレージ（ローカル記事ディレクトリ）
-
-Dropbox または Google Drive 上に配置し、複数デバイスからアクセス可能にする。
+### ローカル記事ディレクトリ
 
 ```text
 <sync-root>/blog/posts/
@@ -59,15 +55,15 @@ Agent が出力する MD 内の画像参照には 2 つのモードがある。1
 ### モード A: ローカル画像（手動配置）
 
 ```markdown
-![alt](images/photo.jpg "caption")
+![alt](images/photo.jpg 'caption')
 ```
 
-クラウドストレージの記事ディレクトリに手動で画像を配置する。Agent は Notion 上の画像ブロックからファイル名参照を生成する。
+ローカル記事ディレクトリに手動で画像を配置する。Agent は Notion 上の画像ブロックからファイル名参照を生成する。
 
 ### モード B: Notion 画像（自動配送）
 
 ```markdown
-![alt](notion-image://block_id "caption")
+![alt](notion-image://block_id 'caption')
 ```
 
 Actions が `notion-image://` スキームを検出し、Notion API で画像を取得して自動配送する。

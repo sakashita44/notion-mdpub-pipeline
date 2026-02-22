@@ -15,7 +15,7 @@ cd notion-mdpub-pipeline
 
 ### 2 リポジトリ構成（推奨）
 
-本リポジトリの更新を継続的に追従したい場合は、別途 private リポジトリを作成し、本リポジトリを upstream として登録する構成を推奨する。
+本リポジトリの更新を継続的に追従したい場合は、別途 private リポジトリを作成し、本リポジトリを upstream として登録する構成が必要。
 
 ```text
 notion-mdpub-pipeline (public)
@@ -31,30 +31,30 @@ notion-mdpub-pipeline (public)
 
 1. GitHub 上に記事用の private リポジトリを作成する
 
-2. private リポジトリに本リポジトリを upstream として登録する
+1. private リポジトリに本リポジトリを upstream として登録する
 
-   ```bash
-   cd <your-private-repo>
-   git remote add upstream git@github.com:sakashita44/notion-mdpub-pipeline.git
+    ```bash
+    cd <your-private-repo>
+    git remote add upstream git@github.com:sakashita44/notion-mdpub-pipeline.git
 
-   # upstream への誤 push を防止
-   git remote set-url --push upstream DISABLE
-   ```
+    # upstream への誤 push を防止
+    git remote set-url --push upstream DISABLE
+    ```
 
-3. upstream の変更を取り込む
+1. upstream の変更を取り込む
 
-   ```bash
-   git fetch upstream
-   git merge upstream/main
-   ```
+    ```bash
+    git fetch upstream
+    git merge upstream/main
+    ```
 
-   ワークフローやルールが更新された場合にこの手順で追従する。
+    ワークフローやルールが更新された場合にこの手順で追従する。
 
 ## Secrets の設定
 
 リポジトリ（2 リポジトリ構成の場合は private 側）の Settings → Secrets and variables → Actions に以下を登録する。
 
-| Secret 名 | 用途 |
-|---|---|
-| `STORAGE_BACKEND` | 配送先（`dropbox` または `gdrive`） |
+| Secret 名              | 用途                                   |
+| ---------------------- | -------------------------------------- |
+| `STORAGE_BACKEND`      | 配送先（`dropbox` / `gdrive`）         |
 | `DROPBOX_ACCESS_TOKEN` | Dropbox API トークン（Dropbox 使用時） |
