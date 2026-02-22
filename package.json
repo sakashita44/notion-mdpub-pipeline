@@ -10,6 +10,7 @@
         "lint": "eslint \"src/**/*.ts\" && markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
         "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
         "fix": "npm run format && npm run lint",
+        "test": "vitest run",
         "prepare": "husky"
     },
     "devDependencies": {
@@ -22,6 +23,7 @@
         "markdownlint-cli2": "^0.20.0",
         "prettier": "^3.8.1",
         "typescript": "^5.9.3",
-        "typescript-eslint": "^8.56.0"
+        "typescript-eslint": "^8.56.0",
+        "vitest": "^4.0.18"
     }
 }
