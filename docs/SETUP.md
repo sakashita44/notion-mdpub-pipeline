@@ -54,7 +54,7 @@ notion-mdpub-pipeline (public)
 
 リポジトリ（2 リポジトリ構成の場合は private 側）の Settings → Secrets and variables → Actions に以下を登録する。
 
-| Secret 名              | 用途                                   |
+| Secret or Variable名   | 用途                                   |
 | ---------------------- | -------------------------------------- |
 | `STORAGE_BACKEND`      | 配送先（`dropbox` / `gdrive`）         |
 | `DROPBOX_ACCESS_TOKEN` | Dropbox API トークン（Dropbox 使用時） |

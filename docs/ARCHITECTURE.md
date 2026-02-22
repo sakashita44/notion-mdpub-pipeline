@@ -7,7 +7,7 @@ Notion (執筆環境)
   ↓ Custom Agent（mdpub 形式 MD に変換）
 GitHub (テキスト中継点・private リポジトリ)
   ↓ GitHub Actions → StorageAdapter
-ローカル記事ディレクトリ
+記事ディレクトリ（配送先）
   ├── index.md    ← 自動配送
   └── images/     ← 手動配置 or 自動配送
   ↓ mdpub publish（PC 上で実行）
@@ -32,7 +32,7 @@ Notion ページを読み取り、mdpub 互換の Markdown（frontmatter + 本�
 
 `posts/` 配下への push をトリガーに、StorageAdapter 経由で該当記事ディレクトリへファイルを配送する。初期対応は Dropbox / Google Drive。
 
-### ローカル記事ディレクトリ
+### 記事ディレクトリ
 
 ```text
 <sync-root>/blog/posts/
@@ -58,7 +58,7 @@ Agent が出力する MD 内の画像参照には 2 つのモードがある。1
 ![alt](images/photo.jpg 'caption')
 ```
 
-ローカル記事ディレクトリに手動で画像を配置する。Agent は Notion 上の画像ブロックからファイル名参照を生成する。
+記事ディレクトリに手動で画像を配置する。Agent は Notion 上の画像ブロックからファイル名参照を生成する。
 
 ### モード B: Notion 画像（自動配送）
 
