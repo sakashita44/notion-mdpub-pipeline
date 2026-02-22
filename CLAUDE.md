@@ -20,13 +20,13 @@ upstream merge の方向: **本リポジトリ → blog-drafts**
 ## コマンド
 
 ```bash
-npm run format        # Prettier + markdownlint --fix
+npm run build:check   # TypeScript 型チェック（noEmit）
+npm run format        # Prettier + ESLint --fix + markdownlint --fix
 npm run format:check  # Prettier チェックのみ
+npm run lint          # ESLint + markdownlint チェック
 npm run lint:md       # markdownlint チェックのみ
-npm run fix           # format + lint:md
+npm run fix           # format + lint
 ```
-
-配送ワークフロー実装時に build, test 等を追記予定。
 
 ## アーキテクチャ
 
@@ -46,6 +46,13 @@ mdpub-wpblocks (WordPress 投稿)
 ### ディレクトリ構成
 
 ```text
+src/
+  storage/
+    adapter.ts       # StorageAdapter インターフェース / StorageBackend 型
+    factory.ts       # createStorageAdapter() ファクトリ関数
+    dropbox.ts       # Dropbox 実装（スタブ）
+    gdrive.ts        # Google Drive 実装（スタブ）
+    index.ts         # re-export
 .github/workflows/   # GitHub Actions ワークフロー（実装予定）
 ```
 
@@ -53,5 +60,5 @@ mdpub-wpblocks (WordPress 投稿)
 
 - 言語: 日本語（コメント、ドキュメント、PR、コミットメッセージ）
 - コミット: Conventional Commits（`feat:`, `fix:`, `chore:` 等）
-- ブランチ: `feature/<yyyymm>/sakashita44/<issue_num>-<content>`
+- ブランチ: `<prefix>/<yyyymm>/sakashita44/<issue_num>-<content>`
 - フォーマッタ設定は mdpub-wpblocks と統一（upstream merge 時のフォーマット衝突防止）
