@@ -1,0 +1,19 @@
+{
+    "name": "notion-mdpub-pipeline",
+    "version": "0.0.0",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "format": "prettier --write \"**/*.{json,md}\" && markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\"",
+        "format:check": "prettier --check \"**/*.{json,md}\"",
+        "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
+        "fix": "npm run format && npm run lint:md",
+        "prepare": "husky"
+    },
+    "devDependencies": {
+        "husky": "^9.1.7",
+        "lint-staged": "^16.2.7",
+        "markdownlint-cli2": "^0.20.0",
+        "prettier": "^3.8.1"
+    }
+}
