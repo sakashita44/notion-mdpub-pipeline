@@ -1,0 +1,146 @@
+name: 記事配送
+
+on:
+  push:
+    paths:
+      - 'posts/**'
+      - '!posts/**/.delivery-status.json'
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: '配送対象の slug（例: my-post）'
+        required: true
+      overwrite:
+        description: '既存ファイルを上書きする'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: 変更ファイル検出（push）
+        if: github.event_name == 'push'
+        id: detect-push
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commits = context.payload.commits ?? [];
+            const files = new Set();
+            for (const commit of commits) {
+              for (const f of [...(commit.added ?? []), ...(commit.modified ?? [])]) {
+                if (f.startsWith('posts/') && !f.endsWith('.delivery-status.json')) {
+                  files.add(f);
+                }
+              }
+            }
+            const list = [...files];
+            core.info(`配送対象: ${list.length} ファイル`);
+            for (const f of list) core.info(`  - ${f}`);
+            core.setOutput('files', JSON.stringify(list));
+            core.setOutput('count', list.length);
+
+      - name: 配送対象ファイル列挙（workflow_dispatch）
+        if: github.event_name == 'workflow_dispatch'
+        id: detect-dispatch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const slug = '${{ inputs.slug }}';
+            const dir = path.join('posts', slug);
+            if (!fs.existsSync(dir)) {
+              core.setFailed(`posts/${slug} が存在しません`);
+              return;
+            }
+            const walk = (d) => {
+              let results = [];
+              for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+                const full = path.join(d, entry.name);
+                if (entry.isDirectory()) {
+                  results = results.concat(walk(full));
+                } else if (entry.name !== '.delivery-status.json') {
+                  results.push(full.replace(/\\/g, '/'));
+                }
+              }
+              return results;
+            };
+            const list = walk(dir);
+            core.info(`配送対象: ${list.length} ファイル`);
+            for (const f of list) core.info(`  - ${f}`);
+            core.setOutput('files', JSON.stringify(list));
+            core.setOutput('count', list.length);
+
+      - name: ファイル配送
+        uses: actions/github-script@v7
+        env:
+          STORAGE_BACKEND: ${{ secrets.STORAGE_BACKEND }}
+          DROPBOX_ACCESS_TOKEN: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
+        with:
+          script: |
+            const fs = require('fs');
+
+            // 配送対象の決定
+            const isPush = '${{ github.event_name }}' === 'push';
+            const filesJson = isPush
+              ? '${{ steps.detect-push.outputs.files }}'
+              : '${{ steps.detect-dispatch.outputs.files }}';
+            const count = parseInt(isPush
+              ? '${{ steps.detect-push.outputs.count }}'
+              : '${{ steps.detect-dispatch.outputs.count }}', 10);
+
+            if (count === 0) {
+              core.info('配送対象ファイルなし。スキップします。');
+              return;
+            }
+
+            const files = JSON.parse(filesJson);
+            const overwrite = '${{ github.event_name }}' === 'workflow_dispatch'
+              && '${{ inputs.overwrite }}' === 'true';
+
+            // StorageAdapter の生成
+            const { createStorageAdapter } = await import(
+              `${process.cwd()}/dist/storage/index.js`
+            );
+            const adapter = createStorageAdapter();
+
+            // 配送実行
+            const results = { uploaded: [], skipped: [], failed: [] };
+            for (const file of files) {
+              try {
+                const content = fs.readFileSync(file);
+                const result = await adapter.uploadFile(file, content, { overwrite });
+                results[result.status].push(file);
+                core.info(`${result.status === 'uploaded' ? '✅' : '⏭️'} ${file} → ${result.status}`);
+              } catch (err) {
+                results.failed.push(file);
+                core.error(`❌ ${file} → ${err.message}`);
+              }
+            }
+
+            // サマリー出力
+            core.info('');
+            core.info('=== 配送結果 ===');
+            core.info(`アップロード: ${results.uploaded.length}`);
+            core.info(`スキップ: ${results.skipped.length}`);
+            core.info(`エラー: ${results.failed.length}`);
+
+            if (results.failed.length > 0) {
+              core.setFailed(`${results.failed.length} ファイルの配送に失敗しました`);
+            }
