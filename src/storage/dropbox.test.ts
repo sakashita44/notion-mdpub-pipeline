@@ -43,12 +43,11 @@ describe('DropboxAdapter', () => {
                 vi.fn().mockResolvedValue(mockResponse(200, '{}')),
             );
             const adapter = new DropboxAdapter();
-            await expect(
-                adapter.uploadFile(
-                    'blog/posts/index.md',
-                    Buffer.from('content'),
-                ),
-            ).resolves.toBeUndefined();
+            const result = await adapter.uploadFile(
+                'blog/posts/index.md',
+                Buffer.from('content'),
+            );
+            expect(result).toEqual({ status: 'uploaded' });
         });
 
         it('パスに先頭スラッシュがない場合は付与する', async () => {
@@ -105,6 +104,100 @@ describe('DropboxAdapter', () => {
             ).rejects.toThrowError(
                 'Dropbox upload 失敗 (401): 認証エラー（トークンが無効または期限切れの可能性があります）: Unauthorized',
             );
+        });
+
+        describe('overwrite オプション', () => {
+            it('デフォルト（overwrite 未指定）では mode: add で送信する', async () => {
+                const mockFetch = vi
+                    .fn()
+                    .mockResolvedValue(mockResponse(200, '{}'));
+                vi.stubGlobal('fetch', mockFetch);
+                const adapter = new DropboxAdapter();
+                await adapter.uploadFile(
+                    'blog/index.md',
+                    Buffer.from('content'),
+                );
+                const callArg = mockFetch.mock.calls[0][1] as {
+                    headers: Record<string, string>;
+                };
+                const arg = JSON.parse(callArg.headers['Dropbox-API-Arg']) as {
+                    mode: string;
+                };
+                expect(arg.mode).toBe('add');
+            });
+
+            it('overwrite: false で既存ファイルと衝突した場合はスキップ結果を返す', async () => {
+                vi.stubGlobal(
+                    'fetch',
+                    vi.fn().mockResolvedValue(
+                        mockResponse(409, {
+                            error_summary: 'path/conflict/file/...',
+                        }),
+                    ),
+                );
+                const adapter = new DropboxAdapter();
+                const result = await adapter.uploadFile(
+                    'blog/index.md',
+                    Buffer.from('content'),
+                    { overwrite: false },
+                );
+                expect(result).toEqual({ status: 'skipped' });
+            });
+
+            it('overwrite: false で 409 だが path/conflict 以外はエラーをスローする', async () => {
+                vi.stubGlobal(
+                    'fetch',
+                    vi.fn().mockResolvedValue(
+                        mockResponse(409, {
+                            error_summary: 'other/error/...',
+                        }),
+                    ),
+                );
+                const adapter = new DropboxAdapter();
+                await expect(
+                    adapter.uploadFile('blog/index.md', Buffer.from('content')),
+                ).rejects.toThrowError('Dropbox upload 失敗 (409)');
+            });
+
+            it('overwrite: true では mode: overwrite で送信する', async () => {
+                const mockFetch = vi
+                    .fn()
+                    .mockResolvedValue(mockResponse(200, '{}'));
+                vi.stubGlobal('fetch', mockFetch);
+                const adapter = new DropboxAdapter();
+                const result = await adapter.uploadFile(
+                    'blog/index.md',
+                    Buffer.from('content'),
+                    { overwrite: true },
+                );
+                const callArg = mockFetch.mock.calls[0][1] as {
+                    headers: Record<string, string>;
+                };
+                const arg = JSON.parse(callArg.headers['Dropbox-API-Arg']) as {
+                    mode: string;
+                };
+                expect(arg.mode).toBe('overwrite');
+                expect(result).toEqual({ status: 'uploaded' });
+            });
+
+            it('overwrite: true で 409 が返った場合はスキップせずエラーをスローする', async () => {
+                vi.stubGlobal(
+                    'fetch',
+                    vi.fn().mockResolvedValue(
+                        mockResponse(409, {
+                            error_summary: 'path/conflict/file/...',
+                        }),
+                    ),
+                );
+                const adapter = new DropboxAdapter();
+                await expect(
+                    adapter.uploadFile(
+                        'blog/index.md',
+                        Buffer.from('content'),
+                        { overwrite: true },
+                    ),
+                ).rejects.toThrowError('Dropbox upload 失敗 (409)');
+            });
         });
     });
 

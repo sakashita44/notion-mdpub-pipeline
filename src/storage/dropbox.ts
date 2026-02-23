@@ -1,4 +1,4 @@
-import type { StorageAdapter } from './adapter.js';
+import type { StorageAdapter, UploadOptions, UploadResult } from './adapter.js';
 
 const DEFAULT_UPLOAD_URL = 'https://content.dropboxapi.com/2/files/upload';
 const DEFAULT_DELETE_URL = 'https://api.dropboxapi.com/2/files/delete_v2';
@@ -30,11 +30,17 @@ export class DropboxAdapter implements StorageAdapter {
     }
 
     /**
-     * ファイルを Dropbox にアップロードする（既存ファイルは上書き）。
+     * ファイルを Dropbox にアップロードする。
      * @param path - アップロード先のパス（例: `blog/posts/my-slug/index.md`）
      * @param content - ファイル内容
+     * @param options - アップロードオプション
      */
-    async uploadFile(path: string, content: Buffer): Promise<void> {
+    async uploadFile(
+        path: string,
+        content: Buffer,
+        options?: UploadOptions,
+    ): Promise<UploadResult> {
+        const overwrite = options?.overwrite ?? false;
         const dropboxPath = path.startsWith('/') ? path : `/${path}`;
 
         const response = await fetch(this.uploadUrl, {
@@ -44,7 +50,7 @@ export class DropboxAdapter implements StorageAdapter {
                 'Content-Type': 'application/octet-stream',
                 'Dropbox-API-Arg': JSON.stringify({
                     path: dropboxPath,
-                    mode: 'overwrite',
+                    mode: overwrite ? 'overwrite' : 'add',
                     autorename: false,
                     mute: false,
                 }),
@@ -53,13 +59,29 @@ export class DropboxAdapter implements StorageAdapter {
         });
 
         if (!response.ok) {
-            const error = await response.text();
+            const bodyText = await response.text();
+
+            // mode: add で既存ファイルと衝突した場合はスキップ
+            if (!overwrite && response.status === 409) {
+                try {
+                    const body = JSON.parse(bodyText) as {
+                        error_summary?: string;
+                    };
+                    if (body.error_summary?.startsWith('path/conflict')) {
+                        return { status: 'skipped' };
+                    }
+                } catch {
+                    // JSON パース失敗は通常のエラーとして処理
+                }
+            }
+
             throw new Error(
-                this.formatErrorMessage('upload', response.status, error),
+                this.formatErrorMessage('upload', response.status, bodyText),
             );
         }
         // 成功時もレスポンスボディを消費してリソースリークを防止
         await response.text();
+        return { status: 'uploaded' };
     }
 
     /**

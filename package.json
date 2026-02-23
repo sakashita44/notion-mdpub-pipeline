@@ -4,6 +4,7 @@
     "type": "module",
     "private": true,
     "scripts": {
+        "build": "tsc -p tsconfig.build.json",
         "build:check": "tsc --noEmit",
         "format": "prettier --write \"**/*.{ts,json,md}\" && eslint --fix \"src/**/*.ts\" && markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\"",
         "format:check": "prettier --check \"**/*.{ts,json,md}\"",

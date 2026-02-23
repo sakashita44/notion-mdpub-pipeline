@@ -20,6 +20,7 @@ upstream merge の方向: **本リポジトリ → blog-drafts**
 ## コマンド
 
 ```bash
+npm run build         # TypeScript ビルド（dist/ に出力）
 npm run build:check   # TypeScript 型チェック（noEmit）
 npm run format        # Prettier + ESLint --fix + markdownlint --fix
 npm run format:check  # Prettier チェックのみ
@@ -48,12 +49,13 @@ mdpub-wpblocks (WordPress 投稿)
 ```text
 src/
   storage/
-    adapter.ts       # StorageAdapter インターフェース / StorageBackend 型
+    adapter.ts       # StorageAdapter / UploadOptions / UploadResult 型定義
     factory.ts       # createStorageAdapter() ファクトリ関数
-    dropbox.ts       # Dropbox 実装（スタブ）
+    dropbox.ts       # Dropbox 実装
     gdrive.ts        # Google Drive 実装（スタブ）
     index.ts         # re-export
-.github/workflows/   # GitHub Actions ワークフロー（実装予定）
+.github/workflows/
+  deliver.yml        # 記事配送ワークフロー
 ```
 
 ## 規約

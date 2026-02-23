@@ -1,8 +1,12 @@
-import type { StorageAdapter } from './adapter.js';
+import type { StorageAdapter, UploadOptions, UploadResult } from './adapter.js';
 
 /** Google Drive バックエンドの StorageAdapter 実装（未実装スタブ） */
 export class GDriveAdapter implements StorageAdapter {
-    uploadFile(_path: string, _content: Buffer): Promise<void> {
+    uploadFile(
+        _path: string,
+        _content: Buffer,
+        _options?: UploadOptions,
+    ): Promise<UploadResult> {
         throw new Error('GDriveAdapter.uploadFile は未実装です');
     }
 
